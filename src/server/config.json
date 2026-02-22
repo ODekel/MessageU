@@ -1,3 +1,4 @@
 {
-  "port_file": "./myport.info"
+  "port_file": "./myport.info",
+  "ip": "0.0.0.0"
 }

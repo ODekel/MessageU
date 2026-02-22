@@ -1,13 +1,10 @@
 import json
 from warnings import warn
 
-from models.client import Client
-
 
 def main():
     config = _get_config()
-    # port = _get_port(config['port_file'])
-    c = Client()
+    port = _get_port(config['port_file'])
 
 
 def _get_config() -> dict:
