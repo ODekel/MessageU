@@ -1,4 +1,6 @@
 {
   "port_file": "./myport.info",
-  "ip": "0.0.0.0"
+  "ip": "0.0.0.0",
+  "version": "2",
+  "db_file": "./defensive.db"
 }

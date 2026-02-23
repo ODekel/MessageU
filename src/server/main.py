@@ -1,10 +1,14 @@
 import json
 from warnings import warn
 
+from db import initialize_db, close_db
+
 
 def main():
     config = _get_config()
     port = _get_port(config['port_file'])
+    initialize_db(config['db_file'])
+    close_db()
 
 
 def _get_config() -> dict:
