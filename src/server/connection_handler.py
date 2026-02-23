@@ -15,7 +15,7 @@ _CODE_MAPPING: dict[int, Callable[[RequestHeaders, bytes], bytes]] = {
 }
 
 
-def _unknown_code(headers: RequestHeaders, content: bytes):
+def _unknown_code(headers: RequestHeaders, _: bytes):
     raise ServerException(f'got unknown code: {headers.code}')
 
 

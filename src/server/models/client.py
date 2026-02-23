@@ -6,6 +6,6 @@ from uuid import UUID
 @dataclass
 class Client:
     client_id: UUID
-    username: str
+    username: bytes
     public_key: bytes
     last_seen: datetime

@@ -12,7 +12,7 @@ def initialize_db(db_path: str) -> None:
     conn.executescript('''
     CREATE TABLE IF NOT EXISTS clients (
         ID BINARY(16) PRIMARY KEY,
-        UserName VARCHAR(255) NOT NULL,
+        UserName VARCHAR(255) NOT NULL UNIQUE,
         PublicKey BINARY(160) NOT NULL,
         LastSeen DATETIME NOT NULL);
     CREATE TABLE IF NOT EXISTS messages (
@@ -39,6 +39,15 @@ def close_db() -> None:
 def get_client(client_id: UUID) -> Client | None:
     with closing(_conn.cursor()) as curr:
         curr.execute('SELECT * FROM clients WHERE ID = ?', (client_id.bytes, ))
+        row = curr.fetchone()
+        if row is None:
+            return None
+        return Client(UUID(bytes=row[0]), row[1], row[2], row[3])
+
+
+def get_client_by_username(username: bytes) -> Client | None:
+    with closing(_conn.cursor()) as curr:
+        curr.execute('SELECT * FROM clients WHERE UserName = ?', (username, ))
         row = curr.fetchone()
         if row is None:
             return None
