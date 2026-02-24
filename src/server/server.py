@@ -1,41 +1,15 @@
-import selectors
-import socket
+import asyncio
+from asyncio import StreamReader, StreamWriter
 from collections.abc import Callable
-from dataclasses import dataclass
 
 
-@dataclass
-class _EventData:
-    handler: Callable[['_EventData'], None]
-    selector: selectors.BaseSelector
-    sock: socket.socket
-    request_handler: Callable[[socket.socket], None]
+async def _run_server(ip: str, port: int, server_version: int,
+                      request_handler: Callable[[StreamReader, StreamWriter, int], None]) -> None:
+    server = await asyncio.start_server(lambda r, w: request_handler(r, w, server_version), ip, port)
+    async with server:
+        await server.serve_forever()
 
 
-def _accept(data: _EventData) -> None:
-    conn, addr = data.sock.accept()
-    print('accepted', conn, 'from', addr)
-    conn.setblocking(False)
-    data.selector.register(conn, selectors.EVENT_READ, _EventData(_read, data.selector, conn, data.request_handler))
-
-
-def _read(data: _EventData) -> None:
-    data.request_handler(data.sock)
-    # TODO: Signal should close connection
-    data.selector.unregister(data.sock)
-    data.sock.close()
-
-
-def run(ip: str, port: int, request_handler: Callable[[socket.socket], None]) -> None:
-    sel = selectors.DefaultSelector()
-    sock = socket.socket()
-    sock.bind((ip, port))
-    sock.listen()
-    sock.setblocking(False)
-    sel.register(sock, selectors.EVENT_READ, _EventData(_accept, sel, sock, request_handler))
-
-    while True:
-        events = sel.select()
-        for key, mask in events:
-            callback = key.data.handler
-            callback(key.data)
+def run(ip: str, port: int, server_version: int,
+        request_handler: Callable[[StreamReader, StreamWriter, int], None]) -> None:
+    asyncio.run(_run_server(ip, port, server_version, request_handler))

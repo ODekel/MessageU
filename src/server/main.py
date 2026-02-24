@@ -4,13 +4,6 @@ from warnings import warn
 from db import initialize_db, close_db
 
 
-def main():
-    config = _get_config()
-    port = _get_port(config['port_file'])
-    initialize_db(config['db_file'])
-    close_db()
-
-
 def _get_config() -> dict:
     try:
         with open('config.json', 'r') as f:
@@ -33,6 +26,13 @@ def _get_port(path: str) -> int:
     except ValueError:
         warn(f'Invalid port number in "{path}". Using default port 1357.')
     return 1357
+
+
+def main():
+    config = _get_config()
+    port = _get_port(config['port_file'])
+    initialize_db(config['db_file'])
+    close_db()
 
 
 if __name__ == "__main__":
