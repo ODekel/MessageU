@@ -1,6 +1,8 @@
 import json
 from warnings import warn
 
+import connection_handler
+import server
 from db import initialize_db, close_db
 
 
@@ -32,6 +34,8 @@ def main():
     config = _get_config()
     port = _get_port(config['port_file'])
     initialize_db(config['db_file'])
+    # server.run(config['ip'], port, config['version'], connection_handler.handler)
+    server.run_with_threads(config['ip'], port, config['version'], connection_handler.socket_handler)
     close_db()
 
 

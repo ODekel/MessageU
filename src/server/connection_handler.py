@@ -1,3 +1,4 @@
+import socket
 import struct
 from asyncio import StreamReader, StreamWriter
 from collections.abc import Callable
@@ -50,3 +51,17 @@ async def handler(reader: StreamReader, writer: StreamWriter, server_version: in
         content = b''
     writer.write(_get_response(headers, content, server_version))
     await writer.drain()
+
+
+def socket_handler(sock: socket.socket, server_version: int) -> None:
+    raw_headers = sock.recv(23)
+    while raw_headers:
+        client_id, version, code, size = struct.unpack('!16sBHI', raw_headers)
+        headers = RequestHeaders(UUID(bytes=client_id), version, code, size)
+        if headers.size > 0:
+            content = sock.recv(headers.size)
+        else:
+            content = b''
+        sock.sendall(_get_response(headers, content, server_version))
+        raw_headers = sock.recv(23)
+    sock.close()
