@@ -1,10 +1,10 @@
-#include "Base64Wrapper.h"
+#include "Base64.h"
 
 
-std::string Base64Wrapper::encode(const std::string& str)
+std::string b64encode(const std::vector<unsigned char>& source)
 {
 	std::string encoded;
-	CryptoPP::StringSource ss(str, true,
+	CryptoPP::VectorSource ss(source, true,
 		new CryptoPP::Base64Encoder(
 			new CryptoPP::StringSink(encoded)
 		) // Base64Encoder
@@ -13,12 +13,12 @@ std::string Base64Wrapper::encode(const std::string& str)
 	return encoded;
 }
 
-std::string Base64Wrapper::decode(const std::string& str)
+std::vector<unsigned char> b64decode(const std::string& str)
 {
-	std::string decoded;
+	std::vector<unsigned char> decoded;
 	CryptoPP::StringSource ss(str, true,
 		new CryptoPP::Base64Decoder(
-			new CryptoPP::StringSink(decoded)
+			new CryptoPP::VectorSink(decoded)
 		) // Base64Decoder
 	); // StringSource
 

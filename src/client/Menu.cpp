@@ -1,7 +1,4 @@
 #include <iostream>
-#include <map>
-#include <smartptr.h>
-#include <string>
 #include "Menu.h"
 #include "MenuActions.h"
 #include "MenuOption.h"
@@ -18,6 +15,7 @@ void operateMenu() {
         { "0", MenuOption("Exit client", exitClient) }
     };
 
+    std::cout << std::endl;
     for (const auto& [key, option] : options) {
         std::cout << key << ") " << option.getDescription() << std::endl;
     }
