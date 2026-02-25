@@ -150,12 +150,18 @@
     <ClCompile Include="Cryptography\AESWrapper.cpp" />
     <ClCompile Include="Cryptography\Base64Wrapper.cpp" />
     <ClCompile Include="Cryptography\RSAWrapper.cpp" />
+    <ClCompile Include="Menu.cpp" />
+    <ClCompile Include="MenuActions.cpp" />
+    <ClCompile Include="MenuOption.cpp" />
     <ClCompile Include="MessageU.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Cryptography\AESWrapper.h" />
     <ClInclude Include="Cryptography\Base64Wrapper.h" />
     <ClInclude Include="Cryptography\RSAWrapper.h" />
+    <ClInclude Include="Menu.h" />
+    <ClInclude Include="MenuActions.h" />
+    <ClInclude Include="MenuOption.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
