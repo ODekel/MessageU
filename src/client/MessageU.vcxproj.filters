@@ -65,5 +65,11 @@
     <ClInclude Include="UserInfo.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Typedefs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="server.info" />
   </ItemGroup>
 </Project>

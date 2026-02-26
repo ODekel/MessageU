@@ -1,7 +1,7 @@
 #include "UserInfo.h"
 
-UserInfo::UserInfo(std::string username, std::string clientId, RSAPrivateWrapperPtr privateKey)
-    : username(std::move(username)), clientId(std::move(clientId)), privateKey(std::move(privateKey)) { }
+UserInfo::UserInfo(std::string username, std::string clientId, RSAPrivateWrapper* privateKey)
+    : username(std::move(username)), clientId(std::move(clientId)), privateKey(RSAPrivateWrapperPtr(privateKey)) { }
 
 const std::string& UserInfo::getUsername() const {
     return username;
@@ -16,5 +16,5 @@ const RSAPrivateWrapper& UserInfo::getPrivateKey() const {
 }
 
 bool UserInfo::isRegistered() const {
-    return privateKey != nullptr;
+    return (bool)privateKey;
 }

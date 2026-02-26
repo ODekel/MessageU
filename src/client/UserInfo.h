@@ -11,7 +11,7 @@ private:
     std::string clientId;
     RSAPrivateWrapperPtr privateKey;
 public:
-    UserInfo(std::string username, std::string clientId, RSAPrivateWrapperPtr privateKey);
+    UserInfo(std::string username, std::string clientId, RSAPrivateWrapper* privateKey);
     const std::string& getUsername() const;
     const std::string& getClientId() const;
     const RSAPrivateWrapper& getPrivateKey() const;

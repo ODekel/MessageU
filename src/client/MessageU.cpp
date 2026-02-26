@@ -1,12 +1,16 @@
 #include "Cryptography/Base64.h"
 #include "Menu.h"
+#include "Typedefs.h"
 #include "UserInfo.h"
+#include <boost/asio.hpp>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <tuple>
 #include <vector>
+
+using boost::asio::ip::tcp;
 
 static std::tuple<std::string, std::string> readIpPort(std::string path) {
     std::ifstream file(path);
@@ -43,7 +47,20 @@ static UserInfoPtr readUserInfo(std::string path) {
         id_stream >> std::hex >> id_arr[i];
     }
     std::string id(id_arr.begin(), id_arr.end());
-    return UserInfoPtr(new UserInfo(username, id, RSAPrivateWrapperPtr(new RSAPrivateWrapper(b64decode(symmetricKey_base64)))));
+    return UserInfoPtr(new UserInfo(username, id, new RSAPrivateWrapper(b64decode(symmetricKey_base64))));
+}
+
+static std::tuple<SocketPtr, std::unique_ptr<boost::asio::io_context>> connectToServer(const std::string& ip, const std::string& port) {
+    auto io_context = std::unique_ptr<boost::asio::io_context>(new boost::asio::io_context());
+    tcp::resolver resolver(*io_context);
+    SocketPtr sock = SocketPtr(new tcp::socket(*io_context));
+    try {
+        boost::asio::connect(*sock, resolver.resolve(ip, port));
+    } catch (const boost::system::system_error&) {
+        std::cout << "Failed to connect to server " << ip << ":" << port << std::endl;
+        exit(1);
+    }
+    return std::make_tuple(std::move(sock), std::move(io_context));
 }
 
 int main()
@@ -58,10 +75,13 @@ int main()
     catch (const std::runtime_error&) {
         userInfo = UserInfoPtr(new UserInfo("", "", nullptr));
     }
+    auto t2 = connectToServer(ip, port);
+    SocketPtr sock = std::move(std::get<0>(t2));
+    std::cout << sock->local_endpoint() << " connected to " << sock->remote_endpoint() << std::endl;
 
     std::cout << "MessageU client at your service." << std::endl;
     while (true)
-        operateMenu(userInfo);
+        operateMenu(userInfo, sock);
 
     return 0;
 }

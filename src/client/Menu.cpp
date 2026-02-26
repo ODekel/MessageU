@@ -3,7 +3,7 @@
 #include "MenuOption.h"
 #include <iostream>
 
-void operateMenu(const std::unique_ptr<UserInfo>& userInfo) {
+void operateMenu(const UserInfoPtr& userInfo, const SocketPtr& sock) {
     static const std::vector<std::pair<std::string, MenuOption>> options = {
         { "110", MenuOption("Register", registerUser) },
         { "120", MenuOption("Request for clients list", getClientList) },
@@ -25,7 +25,7 @@ void operateMenu(const std::unique_ptr<UserInfo>& userInfo) {
     std::cout << std::endl;
     for (const auto& [key, option] : options) {
         if (key == input) {
-            option.execute(userInfo);
+            option.execute(userInfo, sock);
             return;
         }
     }
