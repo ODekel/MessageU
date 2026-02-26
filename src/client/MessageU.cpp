@@ -8,7 +8,7 @@
 #include <tuple>
 #include <vector>
 
-std::tuple<std::string, std::string> readIpPort(std::string path) {
+static std::tuple<std::string, std::string> readIpPort(std::string path) {
     std::ifstream file(path);
     std::stringstream buffer;
     buffer << file.rdbuf();
@@ -22,7 +22,7 @@ std::tuple<std::string, std::string> readIpPort(std::string path) {
     return { ip, port };
 }
 
-std::shared_ptr<UserInfo> readUserInfo(std::string path) {
+static UserInfoPtr readUserInfo(std::string path) {
     std::ifstream file(path);
     if (!file.good()) {
         throw std::runtime_error("User info file not found: " + path);
@@ -38,11 +38,12 @@ std::shared_ptr<UserInfo> readUserInfo(std::string path) {
         exit(1);
     }
     std::istringstream id_stream(id_hex);
-    std::vector<unsigned char> id(16);
+    std::vector<unsigned char> id_arr(16);
     for (int i = 0; i < 16; ++i) {
-        id_stream >> std::hex >> id[i];
+        id_stream >> std::hex >> id_arr[i];
     }
-    return std::shared_ptr<UserInfo>(new UserInfo(username, id, b64decode(symmetricKey_base64)));
+    std::string id(id_arr.begin(), id_arr.end());
+    return UserInfoPtr(new UserInfo(username, id, RSAPrivateWrapperPtr(new RSAPrivateWrapper(b64decode(symmetricKey_base64)))));
 }
 
 int main()
@@ -50,15 +51,17 @@ int main()
     auto t1 = readIpPort("server.info");
     std::string ip = std::get<0>(t1);
     std::string port = std::get<1>(t1);
-    std::shared_ptr<UserInfo> userInfo;
+    UserInfoPtr userInfo;
     try {
         userInfo = readUserInfo("me.info");
     }
-    catch (const std::runtime_error& e) {
-        userInfo = nullptr;
+    catch (const std::runtime_error&) {
+        userInfo = UserInfoPtr(new UserInfo("", "", nullptr));
     }
 
     std::cout << "MessageU client at your service." << std::endl;
-    operateMenu();
+    while (true)
+        operateMenu(userInfo);
+
     return 0;
 }

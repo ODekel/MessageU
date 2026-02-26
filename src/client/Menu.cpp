@@ -1,9 +1,9 @@
-#include <iostream>
 #include "Menu.h"
 #include "MenuActions.h"
 #include "MenuOption.h"
+#include <iostream>
 
-void operateMenu() {
+void operateMenu(const std::unique_ptr<UserInfo>& userInfo) {
     static const std::vector<std::pair<std::string, MenuOption>> options = {
         { "110", MenuOption("Register", registerUser) },
         { "120", MenuOption("Request for clients list", getClientList) },
@@ -25,7 +25,7 @@ void operateMenu() {
     std::cout << std::endl;
     for (const auto& [key, option] : options) {
         if (key == input) {
-            option.execute();
+            option.execute(userInfo);
             return;
         }
     }

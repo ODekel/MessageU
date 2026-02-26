@@ -1,16 +1,20 @@
 #include "UserInfo.h"
 
-UserInfo::UserInfo(std::string username, std::vector<unsigned char> clientId, std::vector<unsigned char> privateKey)
+UserInfo::UserInfo(std::string username, std::string clientId, RSAPrivateWrapperPtr privateKey)
     : username(std::move(username)), clientId(std::move(clientId)), privateKey(std::move(privateKey)) { }
 
 const std::string& UserInfo::getUsername() const {
     return username;
 }
 
-const std::vector<unsigned char>& UserInfo::getClientId() const {
+const std::string& UserInfo::getClientId() const {
     return clientId;
 }
 
-const std::vector<unsigned char>& UserInfo::getPrivateKey() const {
-    return privateKey;
+const RSAPrivateWrapper& UserInfo::getPrivateKey() const {
+    return *privateKey;
+}
+
+bool UserInfo::isRegistered() const {
+    return privateKey != nullptr;
 }

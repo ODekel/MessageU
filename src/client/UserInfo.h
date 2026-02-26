@@ -1,18 +1,21 @@
 #pragma once
 
+#include "Cryptography/RSAWrapper.h"
+#include <memory>
 #include <string>
-#include <vector>
 
 class UserInfo
 {
 private:
     std::string username;
-    std::vector<unsigned char> clientId;
-    std::vector<unsigned char> privateKey;
+    std::string clientId;
+    RSAPrivateWrapperPtr privateKey;
 public:
-    UserInfo(std::string username, std::vector<unsigned char> clientId, std::vector<unsigned char> privateKey);
+    UserInfo(std::string username, std::string clientId, RSAPrivateWrapperPtr privateKey);
     const std::string& getUsername() const;
-    const std::vector<unsigned char>& getClientId() const;
-    const std::vector<unsigned char>& getPrivateKey() const;
+    const std::string& getClientId() const;
+    const RSAPrivateWrapper& getPrivateKey() const;
+    bool isRegistered() const;
 };
 
+typedef std::unique_ptr<UserInfo> UserInfoPtr;
