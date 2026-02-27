@@ -3,7 +3,7 @@
 #include "MenuOption.h"
 #include <iostream>
 
-void operateMenu(const UserInfoPtr& userInfo, const SocketPtr& sock) {
+void operateMenu(const UserInfoPtr& userInfo, const ClientInfoPtr& sock) {
     static const std::vector<std::pair<std::string, MenuOption>> options = {
         { "110", MenuOption("Register", registerUser) },
         { "120", MenuOption("Request for clients list", getClientList) },

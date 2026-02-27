@@ -12,6 +12,8 @@
 
 using boost::asio::ip::tcp;
 
+static constexpr uint8_t CLIENT_VERSION = 1;
+
 static std::tuple<std::string, std::string> readIpPort(std::string path) {
     std::ifstream file(path);
     std::stringstream buffer;
@@ -19,6 +21,7 @@ static std::tuple<std::string, std::string> readIpPort(std::string path) {
     std::string ip, port;
     std::getline(buffer, ip, ':');
     std::getline(buffer, port);
+    file.close();
     if (ip.empty() || port.empty()) {
         std::cout << "Invalid ip or port file " << path << std::endl;
         exit(1);
@@ -37,16 +40,16 @@ static UserInfoPtr readUserInfo(std::string path) {
     std::getline(buffer, username);
     std::getline(buffer, id_hex);
     std::getline(buffer, symmetricKey_base64);
+    file.close();
     if (username.empty() || id_hex.empty() || symmetricKey_base64.empty()) {
         std::cout << "Invalid user info file " << path << std::endl;
         exit(1);
     }
-    std::istringstream id_stream(id_hex);
-    std::vector<unsigned char> id_arr(16);
-    for (int i = 0; i < 16; ++i) {
-        id_stream >> std::hex >> id_arr[i];
+    std::string id;
+    id.reserve(16);
+    for (int i = 0; i < 32; i += 2) {
+        id += static_cast<char>(std::stoi(id_hex.substr(i, 2), nullptr, 16));
     }
-    std::string id(id_arr.begin(), id_arr.end());
     return UserInfoPtr(new UserInfo(username, id, new RSAPrivateWrapper(b64decode(symmetricKey_base64))));
 }
 
@@ -65,12 +68,11 @@ static std::tuple<SocketPtr, std::unique_ptr<boost::asio::io_context>> connectTo
 
 int main()
 {
-    auto t1 = readIpPort("server.info");
-    std::string ip = std::get<0>(t1);
-    std::string port = std::get<1>(t1);
+    auto [ip, port] = readIpPort("server.info");
     UserInfoPtr userInfo;
     try {
         userInfo = readUserInfo("me.info");
+        std::cout << "Registered as user " << userInfo->getUsername() << "." << std::endl;
     }
     catch (const std::runtime_error&) {
         userInfo = UserInfoPtr(new UserInfo("", "", nullptr));
@@ -78,10 +80,11 @@ int main()
     auto t2 = connectToServer(ip, port);
     SocketPtr sock = std::move(std::get<0>(t2));
     std::cout << sock->local_endpoint() << " connected to " << sock->remote_endpoint() << std::endl;
+    ClientInfoPtr clientInfo = ClientInfoPtr(new ClientInfo(sock, std::string(16, '\0'), CLIENT_VERSION));
 
     std::cout << "MessageU client at your service." << std::endl;
     while (true)
-        operateMenu(userInfo, sock);
+        operateMenu(userInfo, clientInfo);
 
     return 0;
 }

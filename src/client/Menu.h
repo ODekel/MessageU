@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Typedefs.h"
+#include "ClientInfo.h"
 #include "UserInfo.h"
 #include <memory>
 
-void operateMenu(const UserInfoPtr& userInfo, const SocketPtr& sock);
+void operateMenu(const UserInfoPtr& userInfo, const ClientInfoPtr& sock);

@@ -1,13 +1,13 @@
 #pragma once
 
-#include "Typedefs.h"
+#include "ClientInfo.h"
 #include "UserInfo.h"
 
-void registerUser(const UserInfoPtr& userInfo, const SocketPtr& sock);
-void getClientList(const UserInfoPtr& userInfo, const SocketPtr& sock);
-void getClientPublicKey(const UserInfoPtr& userInfo, const SocketPtr& sock);
-void getMessages(const UserInfoPtr& userInfo, const SocketPtr& sock);
-void sendMessage(const UserInfoPtr& userInfo, const SocketPtr& sock);
-void requestSymmetricKey(const UserInfoPtr& userInfo, const SocketPtr& sock);
-void sendSymmetricKey(const UserInfoPtr& userInfo, const SocketPtr& sock);
-void exitClient(const UserInfoPtr& userInfo, const SocketPtr& sock);
+void registerUser(const UserInfoPtr& userInfo, const ClientInfoPtr& sock);
+void getClientList(const UserInfoPtr& userInfo, const ClientInfoPtr& sock);
+void getClientPublicKey(const UserInfoPtr& userInfo, const ClientInfoPtr& sock);
+void getMessages(const UserInfoPtr& userInfo, const ClientInfoPtr& sock);
+void sendMessage(const UserInfoPtr& userInfo, const ClientInfoPtr& sock);
+void requestSymmetricKey(const UserInfoPtr& userInfo, const ClientInfoPtr& sock);
+void sendSymmetricKey(const UserInfoPtr& userInfo, const ClientInfoPtr& sock);
+void exitClient(const UserInfoPtr& userInfo, const ClientInfoPtr& sock);
