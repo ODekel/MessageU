@@ -3,7 +3,7 @@ import struct
 import uuid
 from collections.abc import Buffer
 
-import db
+from db import DB
 from models import RequestHeaders, ServerException, Client, Message
 
 
@@ -24,7 +24,7 @@ def _extract_username(username_bytes: bytes) -> bytes:
     return parts[0]
 
 
-def register_client(_: RequestHeaders, content: bytes) -> bytes:
+def register_client(_: RequestHeaders, content: bytes, db: DB) -> bytes:
     raw_username, public_key = _wrapped_unpack(f'!{_USERNAME_MAX_LENGTH}s160s', content)
     username = _extract_username(raw_username)
     if db.get_client_by_username(username) is not None:
@@ -34,7 +34,7 @@ def register_client(_: RequestHeaders, content: bytes) -> bytes:
     return client_id.bytes
 
 
-def get_client_list(headers: RequestHeaders, _: bytes) -> bytes:
+def get_client_list(headers: RequestHeaders, _: bytes, db: DB) -> bytes:
     clients = db.get_all_clients(headers.client_id)
     db.update_client_last_seen(headers.client_id)
     result = b''
@@ -44,7 +44,7 @@ def get_client_list(headers: RequestHeaders, _: bytes) -> bytes:
     return result
 
 
-def get_client_public_key(headers: RequestHeaders, content: bytes) -> bytes:
+def get_client_public_key(headers: RequestHeaders, content: bytes, db: DB) -> bytes:
     client_id = uuid.UUID(bytes=_wrapped_unpack('!16s', content)[0])
     client = db.get_client(client_id)
     db.update_client_last_seen(headers.client_id)
@@ -53,7 +53,7 @@ def get_client_public_key(headers: RequestHeaders, content: bytes) -> bytes:
     return client_id.bytes + client.public_key
 
 
-def send_message(headers: RequestHeaders, content: bytes) -> bytes:
+def send_message(headers: RequestHeaders, content: bytes, db: DB) -> bytes:
     to_id, msg_type, msg_content_size = _wrapped_unpack('!16sBI', content[:21])
     msg_context = content[21:]
     msg_id = db.add_message(Message(0, uuid.UUID(bytes=to_id), headers.client_id, msg_type, msg_context))
@@ -61,7 +61,7 @@ def send_message(headers: RequestHeaders, content: bytes) -> bytes:
     return struct.pack('!16sI', to_id, msg_id)
 
 
-def get_messages(headers: RequestHeaders, _: bytes) -> bytes:
+def get_messages(headers: RequestHeaders, _: bytes, db: DB) -> bytes:
     messages = db.get_messages_for_client(headers.client_id)
     db.update_client_last_seen(headers.client_id)
     db.delete_messages([msg.message_id for msg in messages])
