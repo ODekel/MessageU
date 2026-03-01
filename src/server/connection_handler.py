@@ -27,7 +27,7 @@ _CODE_TO_RES_CODE_MAPPING: dict[int, int] = {
 _ERROR_RES_CODE = 9000
 
 
-def _unknown_code(headers: RequestHeaders, _: bytes):
+def _unknown_code(headers: RequestHeaders, _: bytes, __: DB):
     raise ServerException(f'unknown code: {headers.code}')
 
 
