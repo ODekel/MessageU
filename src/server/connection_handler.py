@@ -56,7 +56,7 @@ def handler(sock: socket.socket, db_factory: Callable[[], DB], server_version: i
             # Thread per connection, so will not block other connections.
             sock.sendall(_get_response(headers, content, db, server_version))
             raw_headers = sock.recv(23)
-    except ConnectionError:
+    except (ConnectionError, struct.error):
         pass
     finally:
         sock.close()
