@@ -15,10 +15,12 @@ uint8_t ClientInfo::getVersion() const {
     return version;
 }
 
+// Use .at to avoid undefined behavior if the username is not found, and throw an exception instead.
 const OtherClient& ClientInfo::getOtherClient(std::string otherUsername) const {
     return others.at(otherUsername);
 }
 
+// Copy the behaviour of the .at function.
 const OtherClient& ClientInfo::getOtherClientById(std::string otherClientId) const {
     for (const auto& [username, other] : others) {
         if (other.getClientId() == otherClientId) {

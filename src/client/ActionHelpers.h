@@ -10,6 +10,8 @@
 #include <tuple>
 #include <string>
 
+// Halper function for menu actions.
+
 using namespace boost::asio::detail::socket_ops;
 using boost::asio::ip::tcp;
 
@@ -35,6 +37,7 @@ static std::string uuidToHex(std::string uuid) {
     return hexId;
 }
 
+// Read function that doesn't throw on fail.
 static bool safeRead(tcp::socket& s, const boost::asio::mutable_buffer& buffers) {
     try {
         boost::asio::read(s, buffers);
@@ -45,6 +48,7 @@ static bool safeRead(tcp::socket& s, const boost::asio::mutable_buffer& buffers)
     }
 }
 
+// Write function that doesn't throw on fail.
 static bool safeWrite(tcp::socket& s, const boost::asio::const_buffer& buffers) {
     try {
         boost::asio::write(s, buffers);
@@ -79,6 +83,7 @@ static std::tuple<int, std::string> sendRequest(uint16_t code, const std::string
     return std::make_tuple(resCode, resPayload);
 }
 
+// Handle server error response for the menu action functions.
 static bool handleError(int resCode) {
     if (resCode == ERROR_RESPONSE_CODE) {
         std::cout << "Server responded with an error." << std::endl;

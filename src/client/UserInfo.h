@@ -4,6 +4,8 @@
 #include <memory>
 #include <string>
 
+// Holds information about the user that is saved between client runs.
+
 class UserInfo
 {
 private:

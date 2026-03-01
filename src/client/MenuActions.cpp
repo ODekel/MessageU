@@ -32,6 +32,7 @@ void registerUser(const UserInfoPtr& userInfo, const ClientInfoPtr& clientInfo) 
         << b64encode(privateKey->getPrivateKey());
     userInfoFile.close();
 
+    // Swap the data in the pointer to the new user info.
     *userInfo = std::move(UserInfo(username, resPayload, privateKey));
     clientInfo->setClientId(resPayload.substr());
     std::cout << "Registered successfully as " << userInfo->getUsername() << "." << std::endl;
@@ -94,11 +95,12 @@ void getMessages(const UserInfoPtr& userInfo, const ClientInfoPtr& clientInfo) {
     }
     std::cout << "Messages:" << std::endl << std::endl;
     size_t loc = 0;
+    // Memory address of char array of the payload.
     auto payloadAddr = resPayload.data();
     while (loc < resPayload.size()) {
         std::string senderId = resPayload.substr(loc, 16);
         loc += 16;
-        loc += 4; // Skip message id
+        loc += 4; // Skip message id.
         MessageType messageType = (MessageType)resPayload[loc++];
         uint32_t messageSize = network_to_host_long(*(uint32_t*)(payloadAddr + loc));
         loc += 4;

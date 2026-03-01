@@ -53,6 +53,8 @@ static UserInfoPtr readUserInfo(std::string path) {
     return UserInfoPtr(new UserInfo(username, id, new RSAPrivateWrapper(b64decode(symmetricKey_base64))));
 }
 
+// Connect to the server.
+// Returns the socket, and also the io_context so that it doesn't get destroyed when going out of scope.
 static std::tuple<SocketPtr, std::unique_ptr<boost::asio::io_context>> connectToServer(const std::string& ip, const std::string& port) {
     auto io_context = std::unique_ptr<boost::asio::io_context>(new boost::asio::io_context());
     tcp::resolver resolver(*io_context);

@@ -3,6 +3,9 @@
 #include "ClientInfo.h"
 #include "UserInfo.h"
 
+// Contains all the action the client can do.
+// Each function is an action.
+
 void registerUser(const UserInfoPtr& userInfo, const ClientInfoPtr& sock);
 void getClientList(const UserInfoPtr& userInfo, const ClientInfoPtr& sock);
 void getClientPublicKey(const UserInfoPtr& userInfo, const ClientInfoPtr& sock);

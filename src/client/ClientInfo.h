@@ -7,6 +7,8 @@
 #include <map>
 #include <memory>
 
+// Holds information about the currently running client.
+
 class ClientInfo
 {
 private:
