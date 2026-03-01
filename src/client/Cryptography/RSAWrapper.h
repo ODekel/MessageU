@@ -12,12 +12,13 @@ public:
 	static const unsigned int BITS = 1024;
 
 private:
-	CryptoPP::AutoSeededRandomPool _rng;
+	mutable CryptoPP::AutoSeededRandomPool _rng;
 	CryptoPP::RSA::PublicKey _publicKey;
 public:
 	RSAPublicWrapper(const std::string& key);
+
 	std::string getPublicKey() const;
-	std::string encrypt(const std::string& plain);
+	std::string encrypt(const std::string& plain) const;
 };
 
 typedef std::unique_ptr<RSAPublicWrapper> RSAPublicWrapperPtr;
@@ -28,7 +29,7 @@ public:
 	static const unsigned int BITS = 1024;
 
 private:
-	CryptoPP::AutoSeededRandomPool _rng;
+	mutable CryptoPP::AutoSeededRandomPool _rng;
 	CryptoPP::RSA::PrivateKey _privateKey;
 public:
 	RSAPrivateWrapper();
@@ -36,7 +37,7 @@ public:
 
 	std::string getPrivateKey() const;
 	std::string getPublicKey() const;
-	std::string decrypt(const std::string& cipher);
+	std::string decrypt(const std::string& cipher) const;
 };
 
 typedef std::unique_ptr<RSAPrivateWrapper> RSAPrivateWrapperPtr;

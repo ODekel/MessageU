@@ -1,71 +1,10 @@
+#include "ActionHelpers.h"
 #include "Cryptography/Base64.h"
 #include "MenuActions.h"
-#include <boost/asio.hpp>
-#include <boost/uuid/uuid.hpp>
-#include <boost/uuid/uuid_io.hpp>
 #include <cstdlib>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-
-using namespace boost::asio::detail::socket_ops;
-using boost::asio::ip::tcp;
-
-static constexpr int USERNAME_FIELD_SIZE = 255;
-static constexpr int ERROR_RESPONSE_CODE = 9000;
-static constexpr int RESPONSE_HEADER_SIZE = 7;
-static const std::tuple<int, std::string> ERROR_RV = std::make_tuple(ERROR_RESPONSE_CODE, "");
-static const std::string USER_INFO_PATH = "./me.info";
-
-static bool safeRead(tcp::socket& s, const boost::asio::mutable_buffer& buffers) {
-    try {
-        boost::asio::read(s, buffers);
-        return true;
-    } catch (const boost::system::system_error&) {
-        return false;
-    }
-}
-
-static bool safeWrite(tcp::socket& s, const boost::asio::const_buffer& buffers) {
-    try {
-        boost::asio::write(s, buffers);
-        return true;
-    } catch (const boost::system::system_error&) {
-        return false;
-    }
-}
-
-static std::tuple<int, std::string> sendRequest(uint16_t code, const std::string& payload, const ClientInfoPtr& clientInfo) {
-    std::string header(clientInfo->getClientId());
-    uint8_t version = clientInfo->getVersion();
-    header.append((char*)&version, 1);
-    uint16_t code_net = host_to_network_short(code);
-    header.append((char*)&code_net, 2);
-    uint32_t size_net = host_to_network_long(payload.size());
-    header.append((char*)&size_net, 4);
-    if (!safeWrite(*clientInfo->getSocket(), boost::asio::buffer(header + payload))) {
-        return ERROR_RV;
-    };
-    char responseHeaders[RESPONSE_HEADER_SIZE];
-    if (!safeRead(*clientInfo->getSocket(), boost::asio::buffer(responseHeaders))) {
-        return ERROR_RV;
-    }
-    uint16_t resCode = network_to_host_short(*(uint16_t*)(responseHeaders + 1));
-    uint32_t resSize = network_to_host_long(*(uint32_t*)(responseHeaders + 3));
-    std::string resPayload(resSize, '\0');
-    if (resSize > 0 && !safeRead(*clientInfo->getSocket(), boost::asio::buffer(resPayload))) {
-        return ERROR_RV;
-    }
-    return std::make_tuple(resCode, resPayload);
-}
-
-static bool handleError(int resCode) {
-    if (resCode == ERROR_RESPONSE_CODE) {
-        std::cout << "Server responded with an error." << std::endl;
-        return true;
-    }
-    return false;
-}
 
 void registerUser(const UserInfoPtr& userInfo, const ClientInfoPtr& clientInfo) {
     if (userInfo->isRegistered()) {
@@ -97,20 +36,111 @@ void registerUser(const UserInfoPtr& userInfo, const ClientInfoPtr& clientInfo) 
     userInfoFile.close();
 
     *userInfo = std::move(UserInfo(username, resPayload, privateKey));
-    clientInfo->setClientId(resPayload);
+    clientInfo->setClientId(resPayload.substr());
     std::cout << "Registered successfully as " << userInfo->getUsername() << "." << std::endl;
 }
 
-void getClientList(const UserInfoPtr&, const ClientInfoPtr&) {
-    // Code to get the client list
+void getClientList(const UserInfoPtr& userInfo, const ClientInfoPtr& clientInfo) {
+    if (!checkRegistration(userInfo)) return;
+    auto [resCode, resPayload] = sendRequest(701, "", clientInfo);
+    if (handleError(resCode)) return;
+
+    int amount = resPayload.size() / SINGLE_CLIENT_PAYLOAD_SIZE;
+    std::unordered_map<std::string, OtherClient> others;
+    if (amount == 0) {
+        std::cout << "No other clients found." << std::endl;
+        return;
+    } else {
+        std::cout << "Other clients:" << std::endl;
+        others.reserve(amount);
+    }
+    for (size_t i = 0; i < resPayload.size(); i += SINGLE_CLIENT_PAYLOAD_SIZE) {
+        OtherClient other = OtherClient(resPayload.substr(i, 16), resPayload.substr(i + 16, USERNAME_FIELD_SIZE));
+        others.insert({ other.getUsername().substr(0, other.getUsername().find('\0')), other});
+        std::cout << other.getUsername() << std::endl;
+    }
+    clientInfo->setOthers(others);
 }
 
-void getClientPublicKey(const UserInfoPtr&, const ClientInfoPtr&) {
-    // Code to get the client's public key
+void getClientPublicKey(const UserInfoPtr& userInfo, const ClientInfoPtr& clientInfo) {
+    if (!checkRegistration(userInfo)) return;
+
+    std::string targetUsername;
+    std::cout << "Enter the username of the client you want to get the public key of: ";
+    std::cin >> targetUsername;
+    const OtherClient* targetClient;
+    try {
+        targetClient = &clientInfo->getOtherClient(targetUsername);
+    } catch (const std::out_of_range&) {
+        std::cout << "No client with username " << targetUsername << " found." << std::endl;
+        return;
+    }
+    auto [resCode, resPayload] = sendRequest(702, targetClient->getClientId(), clientInfo);
+    if (handleError(resCode)) return;
+
+    std::string targetClientId = resPayload.substr(0, 16);
+    RSAPublicWrapperPtr publicKey(new RSAPublicWrapper(resPayload.substr(16, 160)));
+    clientInfo->setPublicKey(targetClientId, std::move(publicKey));
+    std::cout << "Public key of " << targetUsername << " obtained successfully." << std::endl;
 }
 
-void getMessages(const UserInfoPtr&, const ClientInfoPtr&) {
-    // Code to get messages
+void getMessages(const UserInfoPtr& userInfo, const ClientInfoPtr& clientInfo) {
+    if (!checkRegistration(userInfo)) return;
+    auto [resCode, resPayload] = sendRequest(704, "", clientInfo);
+    if (handleError(resCode)) return;
+
+    if (resPayload.empty()) {
+        std::cout << "No new messages." << std::endl;
+        return;
+    }
+    std::cout << "Messages:" << std::endl << std::endl;
+    size_t loc = 0;
+    while (loc < resPayload.size()) {
+        std::string senderId = resPayload.substr(loc, 16);
+        loc += 16;
+        loc += 4; // Skip message id
+        MessageType messageType = (MessageType)resPayload[loc++];
+        uint32_t messageSize = network_to_host_long(*(uint32_t*)(&resPayload + loc));
+        loc += 4;
+        std::string message = resPayload.substr(loc, messageSize);
+        loc += messageSize;
+
+        std::string from;
+        try {
+            from = clientInfo->getOtherClient(senderId).getUsername();
+        } catch (const std::out_of_range&) {
+            from = senderId;
+        }
+
+        std::string content;
+        switch (messageType) {
+            case SYMMETRIC_KEY_REQUEST:
+                content = "Request for symmetric key";
+                break;
+            case SYMMETRIC_KEY_SEND:
+                try {
+                    saveSymmetricKey(message, senderId, clientInfo, userInfo);
+                    content = "Symmetric key received";
+                } catch (const std::out_of_range&) {
+                    content = "can't decrypt symmetric key";
+                }
+                break;
+            case TEXT:
+                try {
+                    content = decryptTextMessage(message, senderId, clientInfo);
+                } catch (const std::out_of_range&) {
+                    content = "can't decrypt message";
+                }
+                break;
+            default:
+                message = "Unknown message type";
+        }
+
+        std::cout << "From: " << from  << std::endl
+            << "Content:" << std::endl
+            << message << std::endl
+            << "-----<EOM>-----" << std::endl << std::endl;
+    }
 }
 
 void sendMessage(const UserInfoPtr&, const ClientInfoPtr&) {

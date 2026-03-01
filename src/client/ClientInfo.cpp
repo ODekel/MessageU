@@ -15,6 +15,30 @@ uint8_t ClientInfo::getVersion() const {
     return version;
 }
 
+const OtherClient& ClientInfo::getOtherClient(std::string otherUsername) const {
+    return others.at(otherUsername);
+}
+
+const RSAPublicWrapperPtr& ClientInfo::getPublicKey(std::string otherUsername) const {
+    return publicKeys.at(otherUsername);
+}
+
+const AESWrapperPtr& ClientInfo::getSymmetricKey(std::string otherUsername) const {
+    return symmetricKeys.at(otherUsername);
+}
+
 void ClientInfo::setClientId(std::string newClientId) {
     this->clientId = std::move(newClientId);
+}
+
+void ClientInfo::setOthers(std::unordered_map<std::string, OtherClient> newOthers) {
+    this->others = std::move(newOthers);
+}
+
+void ClientInfo::setPublicKey(std::string otherUsername, RSAPublicWrapperPtr publicKey) {
+    this->publicKeys.insert({ otherUsername, std::move(publicKey) });
+}
+
+void ClientInfo::setSymmetricKey(std::string otherUsername, AESWrapperPtr symmetricKey) {
+    this->symmetricKeys.insert({ otherUsername, std::move(symmetricKey) });
 }

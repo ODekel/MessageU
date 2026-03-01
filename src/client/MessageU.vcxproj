@@ -163,9 +163,11 @@
     <ClCompile Include="MenuActions.cpp" />
     <ClCompile Include="MenuOption.cpp" />
     <ClCompile Include="MessageU.cpp" />
+    <ClCompile Include="OtherClient.cpp" />
     <ClCompile Include="UserInfo.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ActionHelpers.h" />
     <ClInclude Include="ClientInfo.h" />
     <ClInclude Include="Cryptography\AESWrapper.h" />
     <ClInclude Include="Cryptography\Base64.h" />
@@ -173,6 +175,7 @@
     <ClInclude Include="Menu.h" />
     <ClInclude Include="MenuActions.h" />
     <ClInclude Include="MenuOption.h" />
+    <ClInclude Include="OtherClient.h" />
     <ClInclude Include="Typedefs.h" />
     <ClInclude Include="UserInfo.h" />
   </ItemGroup>

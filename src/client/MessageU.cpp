@@ -75,12 +75,12 @@ int main()
         std::cout << "Registered as user " << userInfo->getUsername() << "." << std::endl;
     }
     catch (const std::runtime_error&) {
-        userInfo = UserInfoPtr(new UserInfo("", "", nullptr));
+        userInfo = UserInfoPtr(new UserInfo("", std::string(16, '\0'), nullptr));
     }
     auto t2 = connectToServer(ip, port);
     SocketPtr sock = std::move(std::get<0>(t2));
     std::cout << sock->local_endpoint() << " connected to " << sock->remote_endpoint() << std::endl;
-    ClientInfoPtr clientInfo = ClientInfoPtr(new ClientInfo(sock, std::string(16, '\0'), CLIENT_VERSION));
+    ClientInfoPtr clientInfo = ClientInfoPtr(new ClientInfo(sock, userInfo->getClientId(), CLIENT_VERSION));
 
     std::cout << "MessageU client at your service." << std::endl;
     while (true)
