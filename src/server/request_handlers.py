@@ -24,6 +24,11 @@ def _extract_username(username_bytes: bytes) -> bytes:
     return parts[0]
 
 
+def _validate_client_registered(headers: RequestHeaders, db: DB) -> None:
+    if db.get_client(headers.client_id) is None:
+        raise ServerException('Client not registered.')
+
+
 def register_client(_: RequestHeaders, content: bytes, db: DB) -> bytes:
     raw_username, public_key = _wrapped_unpack(f'!{_USERNAME_MAX_LENGTH}s160s', content)
     username = _extract_username(raw_username)
@@ -35,6 +40,7 @@ def register_client(_: RequestHeaders, content: bytes, db: DB) -> bytes:
 
 
 def get_client_list(headers: RequestHeaders, _: bytes, db: DB) -> bytes:
+    _validate_client_registered(headers, db)
     clients = db.get_all_clients(headers.client_id)
     db.update_client_last_seen(headers.client_id)
     result = b''
@@ -45,6 +51,7 @@ def get_client_list(headers: RequestHeaders, _: bytes, db: DB) -> bytes:
 
 
 def get_client_public_key(headers: RequestHeaders, content: bytes, db: DB) -> bytes:
+    _validate_client_registered(headers, db)
     client_id = uuid.UUID(bytes=_wrapped_unpack('!16s', content)[0])
     client = db.get_client(client_id)
     db.update_client_last_seen(headers.client_id)
@@ -54,6 +61,7 @@ def get_client_public_key(headers: RequestHeaders, content: bytes, db: DB) -> by
 
 
 def send_message(headers: RequestHeaders, content: bytes, db: DB) -> bytes:
+    _validate_client_registered(headers, db)
     to_id, msg_type, msg_content_size = _wrapped_unpack('!16sBI', content[:21])
     msg_context = content[21:]
     msg_id = db.add_message(Message(0, uuid.UUID(bytes=to_id), headers.client_id, msg_type, msg_context))
@@ -62,6 +70,7 @@ def send_message(headers: RequestHeaders, content: bytes, db: DB) -> bytes:
 
 
 def get_messages(headers: RequestHeaders, _: bytes, db: DB) -> bytes:
+    _validate_client_registered(headers, db)
     messages = db.get_messages_for_client(headers.client_id)
     db.update_client_last_seen(headers.client_id)
     db.delete_messages([msg.message_id for msg in messages])
