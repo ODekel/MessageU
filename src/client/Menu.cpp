@@ -9,7 +9,7 @@ void operateMenu(const UserInfoPtr& userInfo, const ClientInfoPtr& sock) {
         { "120", MenuOption("Request for clients list", getClientList) },
         { "130", MenuOption("Request for public key", getClientPublicKey) },
         { "140", MenuOption("Request for waiting messages", getMessages) },
-        { "150", MenuOption("Send a text message", sendMessage) },
+        { "150", MenuOption("Send a text message", sendTextMessage) },
         { "151", MenuOption("Send a request for symmetric key", requestSymmetricKey) },
         { "152", MenuOption("Send your symmetric key", sendSymmetricKey) },
         { "0", MenuOption("Exit client", exitClient) }

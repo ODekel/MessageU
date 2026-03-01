@@ -72,7 +72,7 @@ int main()
     UserInfoPtr userInfo;
     try {
         userInfo = readUserInfo("me.info");
-        std::cout << "Registered as user " << userInfo->getUsername() << "." << std::endl;
+        std::cout << "Registered as user " << userInfo->getUsername().substr(0, userInfo->getUsername().find('\0')) << "." << std::endl;
     }
     catch (const std::runtime_error&) {
         userInfo = UserInfoPtr(new UserInfo("", std::string(16, '\0'), nullptr));

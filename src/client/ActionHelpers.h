@@ -17,6 +17,7 @@ static constexpr int USERNAME_FIELD_SIZE = 255;
 static constexpr int ERROR_RESPONSE_CODE = 9000;
 static constexpr int RESPONSE_HEADER_SIZE = 7;
 static constexpr int SINGLE_CLIENT_PAYLOAD_SIZE = 16 + 255;
+static constexpr int MESSAGE_HEADER_SIZE = 16 + 1 + 4;
 static const std::tuple<int, std::string> ERROR_RV = std::make_tuple(ERROR_RESPONSE_CODE, "");
 static const std::string USER_INFO_PATH = "./me.info";
 
@@ -25,6 +26,14 @@ enum MessageType : uint8_t {
     SYMMETRIC_KEY_SEND = 2,
     TEXT = 3
 };
+
+static std::string uuidToHex(std::string uuid) {
+    boost::uuids::uuid id;
+    std::memcpy(id.data, uuid.data(), 16);
+    std::string hexId = boost::uuids::to_string(id);
+    hexId.erase(std::remove(hexId.begin(), hexId.end(), '-'), hexId.end());
+    return hexId;
+}
 
 static bool safeRead(tcp::socket& s, const boost::asio::mutable_buffer& buffers) {
     try {
@@ -86,12 +95,25 @@ static bool checkRegistration(const UserInfoPtr& userInfo) {
     return true;
 }
 
-static void saveSymmetricKey(std::string encKey, std::string otherClientId, const ClientInfoPtr& clientInfo, const UserInfoPtr& userInfo) {
+static void saveSymmetricKey(const std::string& encKey, const std::string& otherClientId,
+                             const ClientInfoPtr& clientInfo, const UserInfoPtr& userInfo) {
     clientInfo->setSymmetricKey(otherClientId, AESWrapperPtr(
         new AESWrapper(userInfo->getPrivateKey().decrypt(encKey))
     ));
 }
 
-static std::string decryptTextMessage(std::string cipher, std::string senderId, const ClientInfoPtr& clientInfo) {
+static std::string decryptTextMessage(const std::string& cipher, const std::string& senderId,
+                                      const ClientInfoPtr& clientInfo) {
     return clientInfo->getSymmetricKey(senderId)->decrypt(cipher.data(), cipher.size());
+}
+
+static bool sendMessage(const std::string& to, MessageType type, const std::string& payload,
+                        const ClientInfoPtr& clientInfo) {
+    std::string headers(MESSAGE_HEADER_SIZE, '\0');
+    headers.replace(0, 16, to);
+    headers[16] = type;
+    uint32_t size_net = host_to_network_long(payload.size());
+    headers.replace(17, 4, std::string((char*)&size_net, 4));
+    auto [resCode, resPayload] = sendRequest(703, headers + payload, clientInfo);
+    return !handleError(resCode);
 }

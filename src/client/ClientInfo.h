@@ -22,6 +22,7 @@ public:
     const std::string& getClientId() const;
     uint8_t getVersion() const;
     const OtherClient& getOtherClient(std::string otherUsername) const;
+    const OtherClient& getOtherClientById(std::string otherClientId) const;
     const RSAPublicWrapperPtr& getPublicKey(std::string otherClientId) const;
     const AESWrapperPtr& getSymmetricKey(std::string otherClientId) const;
     void setClientId(std::string newClientId);

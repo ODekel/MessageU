@@ -8,7 +8,7 @@
 
 void registerUser(const UserInfoPtr& userInfo, const ClientInfoPtr& clientInfo) {
     if (userInfo->isRegistered()) {
-        std::cout << "You are already registered as " << userInfo->getUsername() << "." << std::endl;
+        std::cout << "You are already registered as " << userInfo->getUsername().substr(0, userInfo->getUsername().find('\0')) << "." << std::endl;
         return;
     }
 
@@ -25,10 +25,7 @@ void registerUser(const UserInfoPtr& userInfo, const ClientInfoPtr& clientInfo) 
     auto [resCode, resPayload] = sendRequest(700, username + privateKey->getPublicKey(), clientInfo);
     if (handleError(resCode)) return;
 
-    boost::uuids::uuid id;
-    std::memcpy(id.data, resPayload.data(), 16);
-    std::string hexId = boost::uuids::to_string(id);
-    hexId.erase(std::remove(hexId.begin(), hexId.end(), '-'), hexId.end());
+    std::string hexId = uuidToHex(resPayload);
     std::ofstream userInfoFile(USER_INFO_PATH);
     userInfoFile << username << std::endl
         << hexId << std::endl
@@ -55,9 +52,11 @@ void getClientList(const UserInfoPtr& userInfo, const ClientInfoPtr& clientInfo)
         others.reserve(amount);
     }
     for (size_t i = 0; i < resPayload.size(); i += SINGLE_CLIENT_PAYLOAD_SIZE) {
-        OtherClient other = OtherClient(resPayload.substr(i, 16), resPayload.substr(i + 16, USERNAME_FIELD_SIZE));
-        others.insert({ other.getUsername().substr(0, other.getUsername().find('\0')), other});
-        std::cout << other.getUsername() << std::endl;
+        std::string rawUsername = resPayload.substr(i + 16, USERNAME_FIELD_SIZE);
+        std::string username = rawUsername.substr(0, rawUsername.find('\0'));
+        OtherClient other = OtherClient(resPayload.substr(i, 16), username);
+        others.insert({ username, other });
+        std::cout << username << std::endl;
     }
     clientInfo->setOthers(others);
 }
@@ -95,21 +94,22 @@ void getMessages(const UserInfoPtr& userInfo, const ClientInfoPtr& clientInfo) {
     }
     std::cout << "Messages:" << std::endl << std::endl;
     size_t loc = 0;
+    auto payloadAddr = resPayload.data();
     while (loc < resPayload.size()) {
         std::string senderId = resPayload.substr(loc, 16);
         loc += 16;
         loc += 4; // Skip message id
         MessageType messageType = (MessageType)resPayload[loc++];
-        uint32_t messageSize = network_to_host_long(*(uint32_t*)(&resPayload + loc));
+        uint32_t messageSize = network_to_host_long(*(uint32_t*)(payloadAddr + loc));
         loc += 4;
         std::string message = resPayload.substr(loc, messageSize);
         loc += messageSize;
 
         std::string from;
         try {
-            from = clientInfo->getOtherClient(senderId).getUsername();
+            from = clientInfo->getOtherClientById(senderId).getUsername();
         } catch (const std::out_of_range&) {
-            from = senderId;
+            from = "UUID: " + uuidToHex(senderId);
         }
 
         std::string content;
@@ -133,26 +133,91 @@ void getMessages(const UserInfoPtr& userInfo, const ClientInfoPtr& clientInfo) {
                 }
                 break;
             default:
-                message = "Unknown message type";
+                content = "Unknown message type";
         }
 
         std::cout << "From: " << from  << std::endl
             << "Content:" << std::endl
-            << message << std::endl
+            << content << std::endl
             << "-----<EOM>-----" << std::endl << std::endl;
     }
 }
 
-void sendMessage(const UserInfoPtr&, const ClientInfoPtr&) {
-    // Code to send a message
+void sendTextMessage(const UserInfoPtr& userInfo, const ClientInfoPtr& clientInfo) {
+    if (!checkRegistration(userInfo)) return;
+
+    std::cout << "Send message to: ";
+    std::string targetUsername;
+    std::cin >> targetUsername;
+    std::string targetId;
+    try {
+        targetId = clientInfo->getOtherClient(targetUsername).getClientId();
+    } catch (const std::out_of_range&) {
+        std::cout << "No client with username " << targetUsername << " found." << std::endl;
+        return;
+    }
+    const AESWrapperPtr* symKey;
+    try {
+        symKey = &clientInfo->getSymmetricKey(targetId);
+    } catch (const std::out_of_range&) {
+        std::cout << "No symmetric key for client " << targetUsername << " found." << std::endl;
+        return;
+    }
+
+    std::cout << "Enter message: ";
+    std::string message;
+    std::cin >> message;
+
+    std::string payload = symKey->get()->encrypt(message.data(), message.size());
+
+    if (sendMessage(targetId, TEXT, payload, clientInfo))
+        std::cout << "Message sent." << std::endl;
 }
 
-void requestSymmetricKey(const UserInfoPtr&, const ClientInfoPtr&) {
-    // Code to request a client's public key
+void requestSymmetricKey(const UserInfoPtr& userInfo, const ClientInfoPtr& clientInfo) {
+    if (!checkRegistration(userInfo)) return;
+
+    std::cout << "Send symmetric key request to: ";
+    std::string targetUsername;
+    std::cin >> targetUsername;
+    std::string targetId;
+    try {
+        targetId = clientInfo->getOtherClient(targetUsername).getClientId();
+    } catch (const std::out_of_range&) {
+        std::cout << "No client with username " << targetUsername << " found." << std::endl;
+        return;
+    }
+
+    if (sendMessage(targetId, SYMMETRIC_KEY_REQUEST, "", clientInfo))
+        std::cout << "Symmetric key request sent." << std::endl;
 }
 
-void sendSymmetricKey(const UserInfoPtr&, const ClientInfoPtr&) {
-    // Code to send a symmetric key to a client
+void sendSymmetricKey(const UserInfoPtr& userInfo, const ClientInfoPtr& clientInfo) {
+    if (!checkRegistration(userInfo)) return;
+
+    std::cout << "Send symmetric key to: ";
+    std::string targetUsername;
+    std::cin >> targetUsername;
+    std::string targetId;
+    try {
+        targetId = clientInfo->getOtherClient(targetUsername).getClientId();
+    } catch (const std::out_of_range&) {
+        std::cout << "No client with username " << targetUsername << " found." << std::endl;
+        return;
+    }
+    const RSAPublicWrapperPtr* publicKey;
+    try {
+        publicKey = &clientInfo->getPublicKey(targetId);
+    } catch (const std::out_of_range&) {
+        std::cout << "No public key for client " << targetUsername << " found." << std::endl;
+        return;
+    }
+
+    AESWrapper* symKey = new AESWrapper();
+    if (sendMessage(targetId, SYMMETRIC_KEY_SEND, publicKey->get()->encrypt(symKey->getKey()), clientInfo)) {
+        clientInfo->setSymmetricKey(targetId, AESWrapperPtr(symKey));
+        std::cout << "Symmetric key sent." << std::endl;
+    }
 }
 
 void exitClient(const UserInfoPtr&, const ClientInfoPtr&) {

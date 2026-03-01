@@ -19,6 +19,15 @@ const OtherClient& ClientInfo::getOtherClient(std::string otherUsername) const {
     return others.at(otherUsername);
 }
 
+const OtherClient& ClientInfo::getOtherClientById(std::string otherClientId) const {
+    for (const auto& [username, other] : others) {
+        if (other.getClientId() == otherClientId) {
+            return other;
+        }
+    }
+    throw std::out_of_range("No client with id found.");
+}
+
 const RSAPublicWrapperPtr& ClientInfo::getPublicKey(std::string otherUsername) const {
     return publicKeys.at(otherUsername);
 }
