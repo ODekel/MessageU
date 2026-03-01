@@ -24,6 +24,7 @@ def _extract_username(username_bytes: bytes) -> bytes:
     return parts[0]
 
 
+# Make sure client is registered before it can interact with the server.
 def _validate_client_registered(headers: RequestHeaders, db: DB) -> None:
     if db.get_client(headers.client_id) is None:
         raise ServerException('Client not registered.')

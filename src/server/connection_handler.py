@@ -31,6 +31,7 @@ def _unknown_code(headers: RequestHeaders, _: bytes, __: DB):
     raise ServerException(f'unknown code: {headers.code}')
 
 
+# Call function to handle the request and construct the response.
 def _get_response(headers: RequestHeaders, content: bytes, db: DB, server_version: int) -> bytes:
     try:
         res_content = _CODE_TO_HANDLER_MAPPING.get(headers.code, _unknown_code)(headers, content, db)
@@ -52,6 +53,7 @@ def handler(sock: socket.socket, db_factory: Callable[[], DB], server_version: i
                 content = sock.recv(headers.size)
             else:
                 content = b''
+            # Thread per connection, so will not block other connections.
             sock.sendall(_get_response(headers, content, db, server_version))
             raw_headers = sock.recv(23)
     except ConnectionError:

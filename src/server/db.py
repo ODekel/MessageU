@@ -5,6 +5,7 @@ from uuid import UUID
 from models import Client, Message
 
 
+# Create SQL tables if thy do not exist
 def initialize_db(db_path: str) -> None:
     conn = sqlite3.connect(db_path)
     conn.executescript('''
@@ -26,6 +27,7 @@ def initialize_db(db_path: str) -> None:
     conn.close()
 
 
+# Commands to select or save data to the database.
 class DB:
     def __init__(self, db_path: str) -> None:
         self.conn = sqlite3.connect(db_path)
@@ -70,6 +72,7 @@ class DB:
         with closing(self.conn.cursor()) as curr:
             curr.execute('INSERT INTO messages (ToClient, FromClient, Type, Content) VALUES (?, ?, ?, ?)',
                          (msg.to_client.bytes, msg.from_client.bytes, msg.type, msg.content))
+            # Will only select rows by the current connection, so will return correct ID
             curr.execute('SELECT last_insert_rowid()')
             msg_id = curr.fetchone()[0]
             self.conn.commit()
