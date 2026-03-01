@@ -39,7 +39,7 @@ def _get_response(headers: RequestHeaders, content: bytes, db: DB, server_versio
     except ServerException:
         res_content = b''
         res_code = _ERROR_RES_CODE
-    return struct.pack('!BHI', server_version, res_code, len(res_content)) + res_content
+    return struct.pack('<BHI', server_version, res_code, len(res_content)) + res_content
 
 
 def handler(sock: socket.socket, db_factory: Callable[[], DB], server_version: int) -> None:
@@ -47,7 +47,7 @@ def handler(sock: socket.socket, db_factory: Callable[[], DB], server_version: i
     try:
         raw_headers = sock.recv(23)
         while raw_headers:
-            client_id, version, code, size = struct.unpack('!16sBHI', raw_headers)
+            client_id, version, code, size = struct.unpack('<16sBHI', raw_headers)
             headers = RequestHeaders(UUID(bytes=client_id), version, code, size)
             if headers.size > 0:
                 content = sock.recv(headers.size)

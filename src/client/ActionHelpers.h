@@ -4,15 +4,15 @@
 #include "UserInfo.h"
 #include "Cryptography/AESWrapper.h"
 #include <boost/asio.hpp>
+#include <boost/endian/conversion.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <iostream>
 #include <tuple>
 #include <string>
 
-// Halper function for menu actions.
+// Helper function for menu actions.
 
-using namespace boost::asio::detail::socket_ops;
 using boost::asio::ip::tcp;
 
 static constexpr int USERNAME_FIELD_SIZE = 255;
@@ -63,9 +63,9 @@ static std::tuple<int, std::string> sendRequest(uint16_t code, const std::string
     std::string header(clientInfo->getClientId());
     uint8_t version = clientInfo->getVersion();
     header.append((char*)&version, 1);
-    uint16_t code_net = host_to_network_short(code);
+    uint16_t code_net = boost::endian::native_to_little(code);
     header.append((char*)&code_net, 2);
-    uint32_t size_net = host_to_network_long(payload.size());
+    uint32_t size_net = boost::endian::native_to_little((uint32_t)payload.size());
     header.append((char*)&size_net, 4);
     if (!safeWrite(*clientInfo->getSocket(), boost::asio::buffer(header + payload))) {
         return ERROR_RV;
@@ -74,8 +74,8 @@ static std::tuple<int, std::string> sendRequest(uint16_t code, const std::string
     if (!safeRead(*clientInfo->getSocket(), boost::asio::buffer(responseHeaders))) {
         return ERROR_RV;
     }
-    uint16_t resCode = network_to_host_short(*(uint16_t*)(responseHeaders + 1));
-    uint32_t resSize = network_to_host_long(*(uint32_t*)(responseHeaders + 3));
+    uint16_t resCode = boost::endian::little_to_native(*(uint16_t*)(responseHeaders + 1));
+    uint32_t resSize = boost::endian::little_to_native(*(uint32_t*)(responseHeaders + 3));
     std::string resPayload(resSize, '\0');
     if (resSize > 0 && !safeRead(*clientInfo->getSocket(), boost::asio::buffer(resPayload))) {
         return ERROR_RV;
@@ -117,7 +117,7 @@ static bool sendMessage(const std::string& to, MessageType type, const std::stri
     std::string headers(MESSAGE_HEADER_SIZE, '\0');
     headers.replace(0, 16, to);
     headers[16] = type;
-    uint32_t size_net = host_to_network_long(payload.size());
+    uint32_t size_net = boost::endian::native_to_little((uint32_t)payload.size());
     headers.replace(17, 4, std::string((char*)&size_net, 4));
     auto [resCode, resPayload] = sendRequest(703, headers + payload, clientInfo);
     return !handleError(resCode);

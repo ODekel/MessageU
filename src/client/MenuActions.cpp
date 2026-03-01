@@ -35,7 +35,7 @@ void registerUser(const UserInfoPtr& userInfo, const ClientInfoPtr& clientInfo) 
     // Swap the data in the pointer to the new user info.
     *userInfo = std::move(UserInfo(username, resPayload, privateKey));
     clientInfo->setClientId(resPayload.substr());
-    std::cout << "Registered successfully as " << userInfo->getUsername() << "." << std::endl;
+    std::cout << "Registered successfully as " << userInfo->getUsername().substr(0, userInfo->getUsername().find('\0')) << "." << std::endl;
 }
 
 void getClientList(const UserInfoPtr& userInfo, const ClientInfoPtr& clientInfo) {
@@ -102,7 +102,7 @@ void getMessages(const UserInfoPtr& userInfo, const ClientInfoPtr& clientInfo) {
         loc += 16;
         loc += 4; // Skip message id.
         MessageType messageType = (MessageType)resPayload[loc++];
-        uint32_t messageSize = network_to_host_long(*(uint32_t*)(payloadAddr + loc));
+        uint32_t messageSize = boost::endian::little_to_native(*(uint32_t*)(payloadAddr + loc));
         loc += 4;
         std::string message = resPayload.substr(loc, messageSize);
         loc += messageSize;
