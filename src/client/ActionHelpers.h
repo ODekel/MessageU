@@ -1,0 +1,144 @@
+#pragma once
+
+#include "ClientInfo.h"
+#include "ConnectionManager.h"
+#include "UserInfo.h"
+#include "Cryptography/AESWrapper.h"
+#include <boost/endian/conversion.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <iostream>
+#include <tuple>
+#include <string>
+
+// Helper function for menu actions.
+
+static constexpr int USERNAME_FIELD_SIZE = 255;
+static constexpr int ERROR_RESPONSE_CODE = 9000;
+static constexpr int RESPONSE_HEADER_SIZE = 7;
+static constexpr int SINGLE_CLIENT_PAYLOAD_SIZE = 16 + 255;
+static constexpr int MESSAGE_HEADER_SIZE = 16 + 1 + 4;
+static const std::tuple<int, std::string> ERROR_RV = std::make_tuple(ERROR_RESPONSE_CODE, "");
+static const std::string USER_INFO_PATH = "./me.info";
+
+enum MessageType : uint8_t {
+    SYMMETRIC_KEY_REQUEST = 1,
+    SYMMETRIC_KEY_SEND = 2,
+    TEXT = 3
+};
+
+static std::string uuidToHex(std::string uuid) {
+    boost::uuids::uuid id;
+    std::memcpy(id.data, uuid.data(), 16);
+    std::string hexId = boost::uuids::to_string(id);
+    hexId.erase(std::remove(hexId.begin(), hexId.end(), '-'), hexId.end());
+    return hexId;
+}
+
+// Connect function that doesn't throw on fail.
+static bool safeConnect(ConnectionManager& cm) {
+    try {
+        cm.connect();
+        return true;
+    }
+    catch (const boost::system::system_error&) {
+        std::cout << "Failed to connect to server." << std::endl;
+        return false;
+    }
+}
+
+// Read function that doesn't throw on fail.
+static bool safeRead(const ConnectionManager& cm, std::string& buffer) {
+    try {
+        cm.receive(buffer);
+        return true;
+    }
+    catch (const boost::system::system_error&) {
+        return false;
+    }
+}
+
+// Write function that doesn't throw on fail.
+static bool safeWrite(const ConnectionManager& cm, const std::string& buffer) {
+    try {
+        cm.send(buffer);
+        return true;
+    }
+    catch (const boost::system::system_error&) {
+        return false;
+    }
+}
+
+// Close function that doesn't throw on fail.
+static bool safeClose(ConnectionManager& cm) {
+    try {
+        cm.close();
+        return true;
+    }
+    catch (const boost::system::system_error&) {
+        return false;
+    }
+}
+
+static std::tuple<int, std::string> sendRequest(uint16_t code, const std::string& payload, const ClientInfoPtr& clientInfo) {
+    if (!safeConnect(*clientInfo->getConnectionManager())) { return ERROR_RV; }
+    std::string header(clientInfo->getClientId());
+    uint8_t version = clientInfo->getVersion();
+    header.append((char*)&version, 1);
+    uint16_t code_net = boost::endian::native_to_little(code);
+    header.append((char*)&code_net, 2);
+    uint32_t size_net = boost::endian::native_to_little((uint32_t)payload.size());
+    header.append((char*)&size_net, 4);
+    if (!safeWrite(*clientInfo->getConnectionManager(), header + payload)) { return ERROR_RV; }
+
+    std::string responseHeadersStr(RESPONSE_HEADER_SIZE, '\0');
+    if (!safeRead(*clientInfo->getConnectionManager(), responseHeadersStr)) { return ERROR_RV; }
+    char* responseHeaders = responseHeadersStr.data();
+    uint16_t resCode = boost::endian::little_to_native(*(uint16_t*)(responseHeaders + 1));
+    uint32_t resSize = boost::endian::little_to_native(*(uint32_t*)(responseHeaders + 3));
+    std::string resPayload(resSize, '\0');
+    if (resSize > 0 && !safeRead(*clientInfo->getConnectionManager(), resPayload)) { return ERROR_RV; }
+    safeClose(*clientInfo->getConnectionManager());
+
+    return std::make_tuple(resCode, resPayload);
+}
+
+// Handle server error response for the menu action functions.
+static bool handleError(int resCode) {
+    if (resCode == ERROR_RESPONSE_CODE) {
+        std::cout << "Server responded with an error." << std::endl;
+        return true;
+    }
+    return false;
+}
+
+static bool checkRegistration(const UserInfoPtr& userInfo) {
+    if (!userInfo->isRegistered()) {
+        std::cout << "Please register before using the client." << std::endl;
+        return false;
+    }
+    return true;
+}
+
+static void saveSymmetricKey(const std::string& encKey, const std::string& otherClientId,
+                             const ClientInfoPtr& clientInfo, const UserInfoPtr& userInfo) {
+    clientInfo->setSymmetricKey(otherClientId, AESWrapperPtr(
+        new AESWrapper(userInfo->getPrivateKey().decrypt(encKey))
+    ));
+}
+
+static std::string decryptTextMessage(const std::string& cipher, const std::string& senderId,
+                                      const ClientInfoPtr& clientInfo) {
+    return clientInfo->getSymmetricKey(senderId)->decrypt(cipher.data(), cipher.size());
+}
+
+static bool sendMessage(const std::string& to, MessageType type, const std::string& payload,
+                        const ClientInfoPtr& clientInfo) {
+    std::string headers(MESSAGE_HEADER_SIZE, '\0');
+    headers.replace(0, 16, to);
+    headers[16] = type;
+    uint32_t size_net = boost::endian::native_to_little((uint32_t)payload.size());
+    headers.replace(17, 4, std::string((char*)&size_net, 4));
+    auto [resCode, resPayload] = sendRequest(703, headers + payload, clientInfo);
+    return !handleError(resCode);
+}

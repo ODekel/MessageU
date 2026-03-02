@@ -1,0 +1,55 @@
+#include "ClientInfo.h"
+
+ClientInfo::ClientInfo(ConnectionManagerPtr& connMgr, std::string clientId, uint8_t version)
+    : connMgr(std::move(connMgr)), clientId(std::move(clientId)), version(version) { }
+
+const ConnectionManagerPtr& ClientInfo::getConnectionManager() const {
+    return connMgr;
+}
+
+const std::string& ClientInfo::getClientId() const {
+    return clientId;
+}
+
+uint8_t ClientInfo::getVersion() const {
+    return version;
+}
+
+// Use .at to avoid undefined behavior if the username is not found, and throw an exception instead.
+const OtherClient& ClientInfo::getOtherClient(std::string otherUsername) const {
+    return others.at(otherUsername);
+}
+
+// Copy the behaviour of the .at function.
+const OtherClient& ClientInfo::getOtherClientById(std::string otherClientId) const {
+    for (const auto& [username, other] : others) {
+        if (other.getClientId() == otherClientId) {
+            return other;
+        }
+    }
+    throw std::out_of_range("No client with id found.");
+}
+
+const RSAPublicWrapperPtr& ClientInfo::getPublicKey(std::string otherUsername) const {
+    return publicKeys.at(otherUsername);
+}
+
+const AESWrapperPtr& ClientInfo::getSymmetricKey(std::string otherUsername) const {
+    return symmetricKeys.at(otherUsername);
+}
+
+void ClientInfo::setClientId(std::string newClientId) {
+    this->clientId = std::move(newClientId);
+}
+
+void ClientInfo::setOthers(std::unordered_map<std::string, OtherClient> newOthers) {
+    this->others = std::move(newOthers);
+}
+
+void ClientInfo::setPublicKey(std::string otherUsername, RSAPublicWrapperPtr publicKey) {
+    this->publicKeys.insert({ otherUsername, std::move(publicKey) });
+}
+
+void ClientInfo::setSymmetricKey(std::string otherUsername, AESWrapperPtr symmetricKey) {
+    this->symmetricKeys.insert({ otherUsername, std::move(symmetricKey) });
+}
