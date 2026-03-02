@@ -1,9 +1,9 @@
 #pragma once
 
 #include "ClientInfo.h"
+#include "ConnectionManager.h"
 #include "UserInfo.h"
 #include "Cryptography/AESWrapper.h"
-#include <boost/asio.hpp>
 #include <boost/endian/conversion.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -12,8 +12,6 @@
 #include <string>
 
 // Helper function for menu actions.
-
-using boost::asio::ip::tcp;
 
 static constexpr int USERNAME_FIELD_SIZE = 255;
 static constexpr int ERROR_RESPONSE_CODE = 9000;
@@ -37,10 +35,22 @@ static std::string uuidToHex(std::string uuid) {
     return hexId;
 }
 
-// Read function that doesn't throw on fail.
-static bool safeRead(tcp::socket& s, const boost::asio::mutable_buffer& buffers) {
+// Connect function that doesn't throw on fail.
+static bool safeConnect(ConnectionManager& cm) {
     try {
-        boost::asio::read(s, buffers);
+        cm.connect();
+        return true;
+    }
+    catch (const boost::system::system_error&) {
+        std::cout << "Failed to connect to server." << std::endl;
+        return false;
+    }
+}
+
+// Read function that doesn't throw on fail.
+static bool safeRead(const ConnectionManager& cm, std::string& buffer) {
+    try {
+        cm.receive(buffer);
         return true;
     }
     catch (const boost::system::system_error&) {
@@ -49,9 +59,20 @@ static bool safeRead(tcp::socket& s, const boost::asio::mutable_buffer& buffers)
 }
 
 // Write function that doesn't throw on fail.
-static bool safeWrite(tcp::socket& s, const boost::asio::const_buffer& buffers) {
+static bool safeWrite(const ConnectionManager& cm, const std::string& buffer) {
     try {
-        boost::asio::write(s, buffers);
+        cm.send(buffer);
+        return true;
+    }
+    catch (const boost::system::system_error&) {
+        return false;
+    }
+}
+
+// Close function that doesn't throw on fail.
+static bool safeClose(ConnectionManager& cm) {
+    try {
+        cm.close();
         return true;
     }
     catch (const boost::system::system_error&) {
@@ -60,6 +81,7 @@ static bool safeWrite(tcp::socket& s, const boost::asio::const_buffer& buffers) 
 }
 
 static std::tuple<int, std::string> sendRequest(uint16_t code, const std::string& payload, const ClientInfoPtr& clientInfo) {
+    if (!safeConnect(*clientInfo->getConnectionManager())) { return ERROR_RV; }
     std::string header(clientInfo->getClientId());
     uint8_t version = clientInfo->getVersion();
     header.append((char*)&version, 1);
@@ -67,19 +89,17 @@ static std::tuple<int, std::string> sendRequest(uint16_t code, const std::string
     header.append((char*)&code_net, 2);
     uint32_t size_net = boost::endian::native_to_little((uint32_t)payload.size());
     header.append((char*)&size_net, 4);
-    if (!safeWrite(*clientInfo->getSocket(), boost::asio::buffer(header + payload))) {
-        return ERROR_RV;
-    };
-    char responseHeaders[RESPONSE_HEADER_SIZE];
-    if (!safeRead(*clientInfo->getSocket(), boost::asio::buffer(responseHeaders))) {
-        return ERROR_RV;
-    }
+    if (!safeWrite(*clientInfo->getConnectionManager(), header + payload)) { return ERROR_RV; }
+
+    std::string responseHeadersStr(RESPONSE_HEADER_SIZE, '\0');
+    if (!safeRead(*clientInfo->getConnectionManager(), responseHeadersStr)) { return ERROR_RV; }
+    char* responseHeaders = responseHeadersStr.data();
     uint16_t resCode = boost::endian::little_to_native(*(uint16_t*)(responseHeaders + 1));
     uint32_t resSize = boost::endian::little_to_native(*(uint32_t*)(responseHeaders + 3));
     std::string resPayload(resSize, '\0');
-    if (resSize > 0 && !safeRead(*clientInfo->getSocket(), boost::asio::buffer(resPayload))) {
-        return ERROR_RV;
-    }
+    if (resSize > 0 && !safeRead(*clientInfo->getConnectionManager(), resPayload)) { return ERROR_RV; }
+    safeClose(*clientInfo->getConnectionManager());
+
     return std::make_tuple(resCode, resPayload);
 }
 

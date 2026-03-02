@@ -14,7 +14,7 @@ void registerUser(const UserInfoPtr& userInfo, const ClientInfoPtr& clientInfo) 
 
     std::cout << "Enter username: ";
     std::string username;
-    std::cin >> username;
+    std::getline(std::cin, username);
     if (username.empty() || username.length() >= USERNAME_FIELD_SIZE) {
         std::cout << "Username cannot be empty or over 254 characters." << std::endl;
         return;
@@ -67,7 +67,7 @@ void getClientPublicKey(const UserInfoPtr& userInfo, const ClientInfoPtr& client
 
     std::string targetUsername;
     std::cout << "Enter the username of the client you want to get the public key of: ";
-    std::cin >> targetUsername;
+    std::getline(std::cin, targetUsername);
     const OtherClient* targetClient;
     try {
         targetClient = &clientInfo->getOtherClient(targetUsername);
@@ -150,7 +150,7 @@ void sendTextMessage(const UserInfoPtr& userInfo, const ClientInfoPtr& clientInf
 
     std::cout << "Send message to: ";
     std::string targetUsername;
-    std::cin >> targetUsername;
+    std::getline(std::cin, targetUsername);
     std::string targetId;
     try {
         targetId = clientInfo->getOtherClient(targetUsername).getClientId();
@@ -168,7 +168,7 @@ void sendTextMessage(const UserInfoPtr& userInfo, const ClientInfoPtr& clientInf
 
     std::cout << "Enter message: ";
     std::string message;
-    std::cin >> message;
+    std::getline(std::cin, message);
 
     std::string payload = symKey->get()->encrypt(message.data(), message.size());
 
@@ -181,7 +181,7 @@ void requestSymmetricKey(const UserInfoPtr& userInfo, const ClientInfoPtr& clien
 
     std::cout << "Send symmetric key request to: ";
     std::string targetUsername;
-    std::cin >> targetUsername;
+    std::getline(std::cin, targetUsername);
     std::string targetId;
     try {
         targetId = clientInfo->getOtherClient(targetUsername).getClientId();
@@ -199,7 +199,7 @@ void sendSymmetricKey(const UserInfoPtr& userInfo, const ClientInfoPtr& clientIn
 
     std::cout << "Send symmetric key to: ";
     std::string targetUsername;
-    std::cin >> targetUsername;
+    std::getline(std::cin, targetUsername);
     std::string targetId;
     try {
         targetId = clientInfo->getOtherClient(targetUsername).getClientId();

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "OtherClient.h"
+#include "ConnectionManager.h"
 #include "Cryptography/AESWrapper.h"
 #include "Cryptography/RSAWrapper.h"
 #include "Typedefs.h"
@@ -12,15 +13,15 @@
 class ClientInfo
 {
 private:
-    const SocketPtr sock;
+    const ConnectionManagerPtr connMgr;
     std::string clientId;
     const uint8_t version;
     std::unordered_map<std::string, OtherClient> others;
     std::unordered_map<std::string, RSAPublicWrapperPtr> publicKeys;
     std::unordered_map<std::string, AESWrapperPtr> symmetricKeys;
 public:
-    ClientInfo(SocketPtr& sock, std::string clientId, uint8_t version);
-    const SocketPtr& getSocket() const;
+    ClientInfo(ConnectionManagerPtr& connMgr, std::string clientId, uint8_t version);
+    const ConnectionManagerPtr& getConnectionManager() const;
     const std::string& getClientId() const;
     uint8_t getVersion() const;
     const OtherClient& getOtherClient(std::string otherUsername) const;

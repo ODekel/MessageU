@@ -156,6 +156,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="ClientInfo.cpp" />
+    <ClCompile Include="ConnectionManager.cpp" />
     <ClCompile Include="Cryptography\AESWrapper.cpp" />
     <ClCompile Include="Cryptography\Base64.cpp" />
     <ClCompile Include="Cryptography\RSAWrapper.cpp" />
@@ -169,6 +170,7 @@
   <ItemGroup>
     <ClInclude Include="ActionHelpers.h" />
     <ClInclude Include="ClientInfo.h" />
+    <ClInclude Include="ConnectionManager.h" />
     <ClInclude Include="Cryptography\AESWrapper.h" />
     <ClInclude Include="Cryptography\Base64.h" />
     <ClInclude Include="Cryptography\RSAWrapper.h" />

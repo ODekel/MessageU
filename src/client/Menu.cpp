@@ -21,7 +21,7 @@ void operateMenu(const UserInfoPtr& userInfo, const ClientInfoPtr& sock) {
     }
     std::cout << "? ";
     std::string input;
-    std::cin >> input;
+    std::getline(std::cin, input);
     std::cout << std::endl;
     for (const auto& [key, option] : options) {
         if (key == input) {

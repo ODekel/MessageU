@@ -1,10 +1,10 @@
 #include "ClientInfo.h"
 
-ClientInfo::ClientInfo(SocketPtr& sock, std::string clientId, uint8_t version)
-    : sock(std::move(sock)), clientId(std::move(clientId)), version(version) { }
+ClientInfo::ClientInfo(ConnectionManagerPtr& connMgr, std::string clientId, uint8_t version)
+    : connMgr(std::move(connMgr)), clientId(std::move(clientId)), version(version) { }
 
-const SocketPtr& ClientInfo::getSocket() const {
-    return sock;
+const ConnectionManagerPtr& ClientInfo::getConnectionManager() const {
+    return connMgr;
 }
 
 const std::string& ClientInfo::getClientId() const {
