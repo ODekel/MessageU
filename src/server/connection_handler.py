@@ -32,13 +32,14 @@ def _unknown_code(headers: RequestHeaders, _: bytes, __: DB):
 
 
 # Call function to handle the request and construct the response.
-def _get_response(headers: RequestHeaders, content: bytes, db: DB, server_version: int) -> bytes:
+def _get_response(headers: RequestHeaders, content: bytes, db: DB, server_version: int, peer_name: str) -> bytes:
     try:
         res_content = _CODE_TO_HANDLER_MAPPING.get(headers.code, _unknown_code)(headers, content, db)
         res_code = _CODE_TO_RES_CODE_MAPPING[headers.code]
     except ServerException:
         res_content = b''
         res_code = _ERROR_RES_CODE
+    print(f'{peer_name} ({headers.client_id}): Responding with code {res_code}')
     return struct.pack('<BHI', server_version, res_code, len(res_content)) + res_content
 
 
@@ -46,18 +47,15 @@ def handler(sock: socket.socket, db_factory: Callable[[], DB], server_version: i
     db = db_factory()
     try:
         raw_headers = sock.recv(23)
-        while raw_headers:
-            client_id, version, code, size = struct.unpack('<16sBHI', raw_headers)
-            headers = RequestHeaders(UUID(bytes=client_id), version, code, size)
-            if headers.size > 0:
-                content = sock.recv(headers.size)
-            else:
-                content = b''
-            # Thread per connection, so will not block other connections.
-            sock.sendall(_get_response(headers, content, db, server_version))
-            raw_headers = sock.recv(23)
+        client_id, version, code, size = struct.unpack('<16sBHI', raw_headers)
+        headers = RequestHeaders(UUID(bytes=client_id), version, code, size)
+        print(f'{sock.getpeername()} ({headers.client_id}): Got request code {headers.code}')
+        if headers.size > 0:
+            content = sock.recv(headers.size)
+        else:
+            content = b''
+        sock.send(_get_response(headers, content, db, server_version, sock.getpeername()))
     except (ConnectionError, struct.error):
         pass
     finally:
-        sock.close()
         db.close()
